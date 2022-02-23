@@ -16,7 +16,7 @@ class LineFood < ApplicationRecord
   # scopeには引数を渡すことができる
   scope :other_restaurant, -> (picked_restaurant_id) { where.not(restaurant_id: picked_restaurant_id)}
 
-  # インスタンスメソッド。コントローラーではなく、モデルに記述することで再利用性が高まる
+  # 以下インスタンスメソッド。コントローラーではなく、モデルに記述することで再利用性が高まる
   def total_amount
     food.price * count
   end
