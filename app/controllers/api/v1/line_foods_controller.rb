@@ -4,6 +4,28 @@ module Api
       # before_action :フィルタアクション名 :onlyをつけることで特定のアクションのみにて適用できる
       before_action :set_food, only: %i[create]
 
+      def index
+        # activeであるものを取得（activeはスコープ）
+        line_food = LineFood.active
+        # line_foodが存在するか判定
+        if line_foods.exists?
+          resder json: {
+            # .mapで配列やハッシュオブジェクトから１つずつ取り出してそれ以降の処理を実行する
+            line_food_ids: line_foods.map{ |line_food| line_food.id },
+            # 配列の先頭の要素のrestaurantを取得
+            # line_foods.first.restaurantと同じ
+            restaurant: line_food[0].restaurant,
+            # フロント側で計算をすることも可能だが、保守性の観点から基本的にはバックエンドで計算をするべき
+            # line_foodの総計を計算
+            count: line_foods.sum { |line_food| line_food[:count] },
+            # line_foodの総額を計算
+            amount: line_foods.sum { |line_food| line_food.total_amount },
+          }, status: :ok
+        else
+          # 例外処理
+          # 空データと204を返す（エラーではない）
+          render json: {}, status: :no_content
+      end
       def create
         # activeスコープとorder_restaurantスコープを組み合わせて「他店舗でアクティブなLineFoodをActiveRecord_Relationで取得する
         # exists?で存在するかを判定
@@ -59,4 +81,3 @@ module Api
     end
   end
 end
-
