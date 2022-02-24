@@ -2,7 +2,7 @@ module Api
   module V1
     class LineFoodsController < ApplicationController
       # before_action :フィルタアクション名 :onlyをつけることで特定のアクションのみにて適用できる
-      before_action :set_food, only: %i[create]
+      before_action :set_food, only: %i[create replace]
 
       def index
         # activeであるものを取得（activeはスコープ）
@@ -29,7 +29,7 @@ module Api
       def create
         # activeスコープとorder_restaurantスコープを組み合わせて「他店舗でアクティブなLineFoodをActiveRecord_Relationで取得する
         # exists?で存在するかを判定
-        if LineFood.active.order_restaurant(@ordered_food.retaurant.id).exists?
+          if LineFood.active.order_restaurant(@ordered_food.retaurant.id).exists?
           return render json: {
             # 既に作成されている他店舗の情報
             existing_restaurant: LineFood.other_restaurant(@ordered_food.restaurant.id).first.restaurant.name,
@@ -47,6 +47,27 @@ module Api
           }, status: :created
         else
           # エラーが発生した場合には500系のエラーを返す。フロントでエラー画面を表示することができる
+          render json: {}, status: :internal_server_error
+        end
+      end
+
+      def replace
+        # LineFoodからactiveがtrueのものの一覧を取得し、eachで処理
+        # mapは最終的に配列を返すのに対してeachは繰り返し処理を行うだけ
+        LineFood.active.other_restaurant(@ordered_food.restaurants.id).each do |line_food|
+          line_food.update(:active, false)
+        end
+
+        # @line_foodを生成
+        set_line_food(@ordered_food)
+
+        if @line_food.save
+          # saveが成功した場合にはcreatedと@line_foodを返却
+          render json: {
+            line_food: @line_food
+          }, status: :created
+        else
+          # saveが失敗した場合にはinternal_server_errorと空データを返却する
           render json: {}, status: :internal_server_error
         end
       end
