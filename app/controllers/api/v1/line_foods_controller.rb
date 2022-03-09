@@ -6,30 +6,45 @@ module Api
 
       def index
         # activeであるものを取得（activeはスコープ）
-        line_food = LineFood.active
+        line_foods = LineFood.active
         # line_foodが存在するか判定
         if line_foods.exists?
-          resder json: {
-            # .mapで配列やハッシュオブジェクトから１つずつ取り出してそれ以降の処理を実行する
-            line_food_ids: line_foods.map{ |line_food| line_food.id },
-            # 配列の先頭の要素のrestaurantを取得
-            # line_foods.first.restaurantと同じ
-            restaurant: line_food[0].restaurant,
-            # フロント側で計算をすることも可能だが、保守性の観点から基本的にはバックエンドで計算をするべき
-            # line_foodの総計を計算
-            count: line_foods.sum { |line_food| line_food[:count] },
-            # line_foodの総額を計算
-            amount: line_foods.sum { |line_food| line_food.total_amount },
+          line_food_ids = []
+          count = 0
+          amount = 0
+
+          line_foods.each do |line_food|
+            line_food_ids << line_food.id
+            count += line_food[:count]
+            amount += line_food.total_amount
+          end
+          render json: {
+            # # .mapで配列やハッシュオブジェクトから１つずつ取り出してそれ以降の処理を実行する
+            # line_food_ids: line_foods.map{ |line_food| line_food.id },
+            # # 配列の先頭の要素のrestaurantを取得
+            # # line_foods.first.restaurantと同じ
+            # restaurant: line_foods[0].restaurant,
+            # # フロント側で計算をすることも可能だが、保守性の観点から基本的にはバックエンドで計算をするべき
+            # # line_foodの総計を計算
+            # count: line_foods.sum { |line_food| line_food[:count] },
+            # # line_foodの総額を計算
+            # amount: line_foods.sum { |line_food| line_food.total_amount },
+            line_food_ids: line_food_ids,
+            restaurant: line_foods[0].restaurnt,
+            count: count,
+            amount: amount,
           }, status: :ok
         else
           # 例外処理
           # 空データと204を返す（エラーではない）
           render json: {}, status: :no_content
+        end
       end
+
       def create
         # activeスコープとorder_restaurantスコープを組み合わせて「他店舗でアクティブなLineFoodをActiveRecord_Relationで取得する
         # exists?で存在するかを判定
-          if LineFood.active.order_restaurant(@ordered_food.retaurant.id).exists?
+        if LineFood.active.other_restaurant(@ordered_food.restaurant.id).exists?
           return render json: {
             # 既に作成されている他店舗の情報
             existing_restaurant: LineFood.other_restaurant(@ordered_food.restaurant.id).first.restaurant.name,
@@ -54,8 +69,8 @@ module Api
       def replace
         # LineFoodからactiveがtrueのものの一覧を取得し、eachで処理
         # mapは最終的に配列を返すのに対してeachは繰り返し処理を行うだけ
-        LineFood.active.other_restaurant(@ordered_food.restaurants.id).each do |line_food|
-          line_food.update(:active, false)
+        LineFood.active.other_restaurant(@ordered_food.restaurant.id).each do |line_food|
+          line_food.update(active: false)
         end
 
         # @line_foodを生成

@@ -9,7 +9,7 @@ module Api
           total_price: total_price(posted_line_foods),
         )
         # トランザクション（orderモデルに記述）
-        if order.save_whith_update_line_foods:(posted_line_foods)
+        if order.save_with_update_line_foods!(posted_line_foods)
           # 成功した場合に空データとno_content
           render json: {}, status: :no_content
         else
